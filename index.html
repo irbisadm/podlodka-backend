@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <style>
+      .hidden {
+          display: none !important;
+      }
+  </style>
+  <meta charset="UTF-8">
+  <title>Title</title>
+  <script src="https://unpkg.com/voximplant-websdk@beta"></script>
+  <script src="randomName.js"></script>
+</head>
+<body>
+<div id="btns" class="hidden">
+  <p id="myname"></p>
+  <button id="viewer">Join as listener</button>
+  <button id="speaker">Join as speaker</button>
+  <button id="leave" disabled>Leave</button>
+</div>
+<h3>Current speakers <span id="countSpeakers">0</span></h3>
+<div id="endpoints"></div>
+<script>
+  const sdk = VoxImplant.getInstance();
+
+  const init = async () => {
+    await sdk.init({showDebugInfo:true});
+    await sdk.connect(false);
+    await sdk.login('testuser@podlodka.irbisadm.n4.voximplant.com','testpass');
+  }
+
+  init().then(()=>{
+    document.getElementById('btns').classList.remove('hidden');
+  })
+
+  const speakerBtn = document.getElementById('speaker');
+  const viewerBtn = document.getElementById('viewer');
+  const leaveBtn = document.getElementById('leave');
+
+  const  myName = generateName();
+  let countSpeakers = 0;
+  document.getElementById('myname').innerText = myName;
+  let currentCall;
+
+  const setCall = () => {
+    speakerBtn.disabled = true;
+    viewerBtn.disabled = true;
+    leaveBtn.disabled = false;
+    currentCall.addEventListener(VoxImplant.CallEvents.EndpointAdded, endpointAdded);
+  }
+
+  const endpointAdded = (e)=>{
+    countSpeakers++;
+    document.getElementById('countSpeakers').innerHTML = countSpeakers;
+    const nameTable = document.getElementById('endpoints');
+    let p = document.createElement('p');
+    p.id = e.endpoint.id;
+    p.innerText = `Name: ${e.endpoint.displayName}, id: ${e.endpoint.id}`;
+    nameTable.append(p);
+  }
+
+  speakerBtn.addEventListener('click',()=>{
+    countSpeakers++;
+    document.getElementById('countSpeakers').innerHTML = countSpeakers;
+    currentCall = sdk.callConference({
+      number: 'podlodka',
+      extraHeaders: {'X-Name': myName},
+      video: {sendVideo:true, receiveVideo: true}
+    })
+    setCall();
+    currentCall.addEventListener(VoxImplant.CallEvents.Connected, ()=>{
+      sdk.showLocalVideo();
+    })
+  });
+
+  viewerBtn.addEventListener('click',()=>{
+    currentCall = sdk.joinAsViewer('podlodka');
+    setCall();
+  })
+</script>
+</body>
+</html>
